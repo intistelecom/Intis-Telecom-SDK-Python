@@ -1,0 +1,8 @@
+*.egg-info
+*.pot
+*.py[co]
+__pycache__
+
+php/*
+.idea
+tests.py
