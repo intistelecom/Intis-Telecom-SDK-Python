@@ -4,7 +4,7 @@ A Python 2/3 client for the Intis CMS APIs http://www.sms16.ru/
 
 Installation
 -----
-pip install python-intis
+pip install git+git://github.com/ilya-muhortov/python-intis@master
 
 Requires
 -----
@@ -13,8 +13,10 @@ Requires
 ##Examples
 ```python
 from intis import IntisClient, IntisApiError
+
 API_LOGIN = 'LOGIN'
 API_KEY = 'KEY'
+
 client = IntisClient(API_LOGIN, API_KEY)
 try:
     balance = client.get_balance()
