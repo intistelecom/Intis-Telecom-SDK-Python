@@ -2,11 +2,33 @@
 import six
 from datetime import datetime
 
-datetime_convert = lambda datetime_str: datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S') if datetime_str else None
-date_convert = lambda datetime_str: datetime.strptime(datetime_str, '%Y-%m-%d') if datetime_str else None
+
+def datetime_convert(value):
+    if isinstance(value, six.string_types) and value not in ['0000-00-00 00:00:00', '']:
+        try:
+            return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            pass
+    return None
 
 
-class ModelBase(object):
+def date_convert(value):
+    if isinstance(value, six.string_types) and value not in ['0000-00-00', '']:
+        try:
+            return datetime.strptime(value, '%Y-%m-%d')
+        except ValueError:
+            pass
+    return None
+
+
+def time_convert(value):
+    try:
+        return datetime.strptime(value, '%H:%M:%S').time()
+    except ValueError:
+        return None
+
+
+class ModelBase(dict):
 
     use_not_specified = True
 
@@ -24,7 +46,7 @@ class ModelBase(object):
                     try:
                         setattr(self, field[0], to_python(value))
                     except Exception as e:
-                        raise Exception(e)
+                        setattr(self, field[0], None)
 
         if self.use_not_specified:
             for key, value in kwargs.items():
@@ -66,7 +88,8 @@ class PhoneBase(ModelBase):
 
     fields = (
         (('id', int),),
-        ('name', 'time_birth', 'day_before', 'local_time', 'birth_sender', 'birth_text', 'on_birth', 'count', 'pages')
+        ('name', ('time_birth', time_convert), ('day_before', int), ('local_time', int), 'birth_sender', 'birth_text', 'on_birth',
+         ('count', int), 'pages')
     )
 
 
@@ -90,7 +113,7 @@ class PhoneBaseNumber(ModelBase):
 
     fields = (
         ('phone',),
-        ('name', 'last_name', 'middle_name', 'date_birth', 'male', 'note1', 'note2', 'region', 'operator')
+        ('name', 'last_name', 'middle_name', ('date_birth', date_convert), 'male', 'note1', 'note2', 'region', 'operator')
     )
 
 
@@ -116,6 +139,15 @@ class Sender(ModelBase):
     COMPLETED = 'completed'
     ORDER = 'order'
     REJECTED = 'rejected'
+
+    def is_completed(self):
+        return self.state == self.COMPLETED
+
+    def is_order(self):
+        return self.state == self.ORDER
+
+    def is_rejected(self):
+        return self.state == self.REJECTED
 
 
 class Message(ModelBase):
@@ -221,9 +253,19 @@ class Template(ModelBase):
 
 class DeliverStatistic(object):
 
-    def __init__(self, cost, parts):
+    DELIVERED = 'deliver'
+    EXPIRED = 'expired'
+
+    def __init__(self, cost, parts, status):
         self.cost = float(cost)
         self.parts = int(parts)
+        self.status = status
+
+    def is_delivered(self):
+        return self.status == self.DELIVERED
+
+    def is_expired(self):
+        return self.status == self.EXPIRED
 
 
 class Statistic(ModelBase):
@@ -233,24 +275,18 @@ class Statistic(ModelBase):
     Parameters
     -----------------------
         date: Date for statistics output
-        deliver: Delivered messages statistic
-        not_deliver: Not delivered messages statistic
+        stats: Messages
     """
 
     fields = (
-        (('date', date_convert), 'info'),
+        (('date', date_convert), 'stats'),
     )
 
-    def __init__(self, date, info, **kwargs):
-        super(Statistic, self).__init__(date, info, **kwargs)
-        self.deliver, self.not_deliver = None, None
-        for info_item in info:
-            if 'deliver' in info_item:
-                info_ = info_item['deliver'][0]
-                self.deliver = DeliverStatistic(info_['cost'], info_['parts'])
-            elif 'not_deliver' in info_item:
-                info_ = info_item['not_deliver'][0]
-                self.not_deliver = DeliverStatistic(info_['cost'], info_['parts'])
+    def __init__(self, date, stats, **kwargs):
+        super(Statistic, self).__init__(date, stats, **kwargs)
+        self.stats = []
+        for stat in stats:
+            self.stats.append(DeliverStatistic(**stat))
 
 
 class HLRResponse(ModelBase):
@@ -305,4 +341,36 @@ class HLRStatistic(HLRResponse):
     fields = (
         ('phone',),
         ('message_id', ('total_price', float), 'request_id', 'request_time') + HLRResponse.fields[1]
+    )
+
+
+class Price(ModelBase):
+    """
+    Class for getting prices
+
+    Parameters
+    -----------------------
+        id:
+        network_name:
+        country:
+        price:
+        currency:
+    """
+
+    fields = (
+        (('id', int),),
+        ('network_name', 'country', ('price', float), 'currency')
+    )
+
+
+class Operator(ModelBase):
+    """
+    Class for getting mobile operator info
+
+    Parameters
+    -----------------------
+    """
+    fields = (
+        (),
+        ('country', 'currency', 'mcc', 'mnc', 'operator', 'phone', 'ported', 'price', 'regionCode', 'timeZone')
     )
