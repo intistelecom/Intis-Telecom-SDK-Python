@@ -13,18 +13,22 @@ except ImportError:
     from urllib import urlencode
 
 
-from intis.exceptions import IntisApiError, IntisHTTPError, ERROR_EMPTY_RESPONSE_CODE
+from intis.exceptions import IntisApiError, IntisHTTPError, IntisError, ERROR_EMPTY_RESPONSE_CODE
 from intis.utils import wrap_result
 from intis.models import *
 
 EMPTY_VALUES = [None, '', {}, [], 'null']
-DEFAULT_HOST = 'https://new.sms16.ru/get/'
+DEFAULT_HOST = 'https://go.intistele.com/external/get/'
 
 
 class IntisBaseClient(object):
     """
     The main class for working with API
     """
+
+    Error = IntisError
+    HTTPError = IntisHTTPError
+    ApiError = IntisApiError
 
     def http_response(self, url):
         """
@@ -35,7 +39,7 @@ class IntisBaseClient(object):
         try:
             handle = urllib_request.urlopen('%s%s' % (self.host, url))
         except urllib_error.HTTPError as e:
-            raise IntisHTTPError(e)
+            raise self.HTTPError(e)
 
         response = handle.read()
         response = response.decode('utf-8', errors='ignore')
@@ -85,25 +89,32 @@ class IntisBaseClient(object):
 
         url = '%s.php?%s' % (script_name, urlencode(params))
         response = self.http_response(url)
-        print('Debug: %s\n' % response)
+
+        if self.debug:
+            from pprint import pprint
+            print('Response: %s\n' % response)
 
         try:
             result = json.loads(response)
         except TypeError as e:
-            raise IntisApiError(0)
+            raise self.ApiError(0)
+
+        if self.debug:
+            from pprint import pprint
+            pprint(result)
 
         if result in EMPTY_VALUES:
-            raise IntisApiError(ERROR_EMPTY_RESPONSE_CODE)
+            raise self.ApiError(ERROR_EMPTY_RESPONSE_CODE)
 
         if 'error' in result:
-            raise IntisApiError(result['error'])
+            raise self.ApiError(result['error'])
 
         return result
 
 
 class IntisClient(IntisBaseClient):
 
-    def __init__(self, login, key, host=DEFAULT_HOST, raise_empty=False):
+    def __init__(self, login, key, host=DEFAULT_HOST, raise_empty=False, debug=False):
         """
         The main class for SMS sending and getting API information
         :param login: user's login
@@ -115,6 +126,7 @@ class IntisClient(IntisBaseClient):
         self.key = key
         self.host = host
         self.raise_empty = raise_empty
+        self.debug = debug
 
     @wrap_result(Balance)
     def get_balance(self):
@@ -219,6 +231,15 @@ class IntisClient(IntisBaseClient):
         result = self.get_result('add_template', {'name': name, 'text': text})
         return result['id']
 
+    def delete_template(self, name):
+        """
+        Deleting user's template
+        :param name: template name
+        :return: status
+        """
+        result = self.get_result('del_template', {'name': name})
+        return result['result']
+
     @wrap_result(Statistic, multiple=True)
     def get_statistic_on_month(self, year, month):
         """
@@ -227,17 +248,16 @@ class IntisClient(IntisBaseClient):
         :param month: Month
         :return: list of Statistic
         """
-        return self.get_result('stat_by_month', {'month': '%s-%s' % (str(year), str(month))})
+        return self.get_result('stat_by_month', {'month': '%s-%s' % (str(year), str(month).zfill(2))})
 
+    @wrap_result(Operator, multiple=False)
     def get_network_by_phone(self, phone):
         """
         Getting the operator of subscriber's phone number
         :param phone: phone number
         :return: operator name
         """
-        result = self.get_result('operator', {'phone': phone})
-
-        return result.get('operator', None) if isinstance(result, dict) else None
+        return self.get_result('operator', {'phone': phone})
 
     @wrap_result(HLRStatistic, multiple=True)
     def get_hlr_statistic(self, date_from, date_to):
@@ -250,7 +270,7 @@ class IntisClient(IntisBaseClient):
         return self.get_result('hlr_stat', {'from': date_from, 'to': date_to})
 
     @wrap_result(HLRResponse, multiple=True)
-    def make_hrl_request(self, phone):
+    def make_hlr_request(self, phone):
         """
         Sending HLR request for number
         :param phone: phone numbers
@@ -269,3 +289,10 @@ class IntisClient(IntisBaseClient):
         :return: list of MessageInbox
         """
         return self.get_result('incoming', {'date': date})
+
+    @wrap_result(Price, multiple=True)
+    def get_prices(self):
+        """
+        Request for prices
+        """
+        return self.get_result('prices')

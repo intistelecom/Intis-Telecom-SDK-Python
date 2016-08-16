@@ -3,7 +3,5 @@
 *.py[co]
 __pycache__
 
-php/*
 .idea
-tests.py
-setup.py
+test_settings.py

@@ -1,13 +1,18 @@
 
 import unittest
-
 from intis import IntisClient, IntisApiError, models
+
+class settings(object):
+    login = 'LOGIN'
+    api_key = 'KEY'
+    debug = False
+    phone = '70000000000'
 
 
 class IntisTest(unittest.TestCase):
 
     def setUp(self):
-        self.client = IntisClient('LOGIN', 'API_KEY', debug=True)
+        self.client = IntisClient(settings.login, settings.api_key, debug=settings.debug)
 
     def test_timestamp(self):
         self.assertRegex(self.client.timestamp, '^\d{10}$')
@@ -37,7 +42,7 @@ class IntisTest(unittest.TestCase):
 
     def test_message_send(self):
         sender = self.client.get_senders()[0]
-        messages = self.client.message_send('+79000000000', sender.sender, 'Hello')
+        messages = self.client.message_send(settings.phone, sender.sender, 'Test message')
         for message in messages:
             self.assertIsInstance(message, models.Message)
             statuses = self.client.get_message_status(message.id_sms)
@@ -45,7 +50,7 @@ class IntisTest(unittest.TestCase):
                 self.assertIsInstance(status, models.MessageStatus)
 
     def test_stop_list(self):
-        phone = '79000000000'
+        phone = settings.phone
         try:
             id = self.client.add_to_stop_list(phone)
             self.assertIsNotNone(id)
@@ -89,7 +94,7 @@ class IntisTest(unittest.TestCase):
             self.assertIsInstance(stat, models.Statistic)
 
     def test_hlr_request(self):
-        for hlr in self.client.make_hlr_request('79140000000'):
+        for hlr in self.client.make_hlr_request(settings.phone):
             self.assertIsInstance(hlr, models.HLRResponse)
 
     def test_hlr_statistic(self):
@@ -98,7 +103,7 @@ class IntisTest(unittest.TestCase):
             self.assertIsInstance(statistic, models.HLRStatistic)
 
     def test_network_by_phone(self):
-        result = self.client.get_network_by_phone('79140000000')
+        result = self.client.get_network_by_phone(settings.phone)
         self.assertIsInstance(result, models.Operator)
 
     def test_inbox_messages(self):
