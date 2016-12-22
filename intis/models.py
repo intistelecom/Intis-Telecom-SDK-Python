@@ -205,6 +205,7 @@ class InboxMessage(ModelBase):
     -----------------------
         id: Message ID
         date: Date of message receiving
+        phone:
         sender: Sender's name
         prefix: Prefix of the incoming message
         text: Text of message
@@ -212,7 +213,7 @@ class InboxMessage(ModelBase):
 
     fields = (
         (('id', int),),
-        (('date', datetime_convert), 'sender', 'prefix', 'text'),
+        (('date', datetime_convert), 'sender', 'phone', 'prefix', 'text'),
     )
 
 
