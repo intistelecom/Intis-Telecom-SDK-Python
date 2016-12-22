@@ -4,7 +4,7 @@ A Python 2/3 client for the Intis CMS APIs http://www.sms16.ru/
 
 Installation
 -----
-pip install git+git://github.com/ilya-muhortov/python-intis@master
+pip install intis
 
 Requires
 -----
