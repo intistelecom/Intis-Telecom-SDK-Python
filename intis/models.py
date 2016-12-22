@@ -1,36 +1,39 @@
 
 import six
-from datetime import datetime
+import datetime
 
 
 def datetime_convert(value):
     if isinstance(value, six.string_types) and value not in ['0000-00-00 00:00:00', '']:
         try:
-            return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+            return datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
         except ValueError:
             pass
+
     return None
 
 
 def date_convert(value):
     if isinstance(value, six.string_types) and value not in ['0000-00-00', '']:
         try:
-            return datetime.strptime(value, '%Y-%m-%d')
+            return datetime.datetime.strptime(value, '%Y-%m-%d')
         except ValueError:
             pass
+
     return None
 
 
 def time_convert(value):
     try:
-        return datetime.strptime(value, '%H:%M:%S').time()
+        return datetime.datetime.strptime(value, '%H:%M:%S').time()
     except ValueError:
         return None
 
 
-class ModelBase(dict):
+class ModelBase(object):
 
     use_not_specified = True
+    fields = ()
 
     def __init__(self, *args, **kwargs):
         for use_kwargs, fields in enumerate(self.fields):
@@ -195,6 +198,9 @@ class MessageStatus(ModelBase):
     EXPIRED = 'expired'
     NOT_DELIVER = 'not_deliver'
     PARTLY_DELIVER = 'partly_deliver'
+
+    def is_delivered(self):
+        return self.status == self.DELIVER
 
 
 class InboxMessage(ModelBase):

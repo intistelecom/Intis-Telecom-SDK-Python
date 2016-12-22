@@ -53,6 +53,47 @@ Use the `get_balance()` method to request your balance status
 try:
     balance = client.get_balance()
     balance.money
+    balanve.currency
 except IntisApiError as e:
     print(e)
+```
+
+
+To get a list of all the contact databases you have use the function `get_phone_bases()`
+```python
+for base in client.get_phone_bases():
+    base.id
+    base.name
+    base.count
+    base.pages
+```
+
+Our gateway supports the option of having unlimited sender’s names. To see a list of all senders’ names use the method `get_senders()`
+```python
+for sender in client.get_senders():
+    sender.sender
+    sender.state
+```
+
+To send a message (to one or several recipients), use the function `message_send(phone, sender, text)`,
+where `phone` - is a set of numbers you send your messages to,
+`sender` is a sender’s name and `text` stands for the content of the message.
+```python
+sender = client.get_senders()[0]
+messages = client.message_send(settings.phone, sender.sender, 'Test message')
+for message in messages:
+    status = self.client.get_message_status(message.id_sms)[0]
+    if status.is_delivered():
+        status.time
+```
+
+To get a list of incoming messages please use the function `get_inbox_messages(date)`, where `date` stands for a particular day in YYYY-mm-dd format.
+```python
+for message in client.get_inbox_messages(date_from):
+    message.id
+    message.date
+    message.sender
+    message.phone
+    message.prefix
+    message.text
 ```
